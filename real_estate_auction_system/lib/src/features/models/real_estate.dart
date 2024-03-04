@@ -5,6 +5,7 @@ class RealEstate {
   final double acreage;
   final String address;
   final String? imageURL;
+  final int realEstateStatus;
   final int id;
   RealEstate(
       {required this.code,
@@ -13,6 +14,7 @@ class RealEstate {
       required this.acreage,
       required this.address,
       this.imageURL,
+      required this.realEstateStatus,
       required this.id});
 
   factory RealEstate.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class RealEstate {
       acreage: (json['acreage'] as num).toDouble(),
       address: json['address'],
       imageURL: json['imageURL'],
+      realEstateStatus: json['realEstateStatus'], 
       id: json['id'],
     );
   }

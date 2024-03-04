@@ -101,5 +101,38 @@ Future auction(BuildContext context, int auctionId, double currentPrice) async {
     },
   ).timeout(const Duration(seconds: 30));
   if (!context.mounted) return;
- Navigator.of(context, rootNavigator: true).pop();
+  Navigator.of(context, rootNavigator: true).pop();
+}
+
+Future<bool> checkAuction(BuildContext context, int auctionId) async {
+  showDialog(
+      context: context,
+      builder: (context) {
+        return const Center(
+          child: CircularProgressIndicator(
+            color: mainColor,
+            backgroundColor: greyColor,
+          ),
+        );
+      });
+  final uri =
+      Uri.parse('${ApiConfig.baseUrl}/RealtimeAuction/StartAuction?realEstateId=$auctionId');
+  // var sharedPref = await SharedPreferences.getInstance();
+  // String? token = sharedPref.getString('token');
+  var response = await http.get(
+    uri,
+    // headers: {
+    //   'Authorization': 'Bearer $token',
+    // },
+  ).timeout(const Duration(seconds: 30));
+  if (response.statusCode == 200) {
+    final bool apiResponse = json.decode(response.body);
+    if (!context.mounted) return false;
+    Navigator.of(context, rootNavigator: true).pop();
+    return apiResponse;
+  } else {
+    if (!context.mounted) return false;
+    Navigator.of(context, rootNavigator: true).pop();
+    return false;
+  }
 }

@@ -43,7 +43,7 @@ class _BindingPageState extends State<Binding> {
             builder: (BuildContext context) {
               return AlertDialog(
                 title: const Text("Phiên đấu giá đã kết thúc"),
-                content: const Text("Cửa sổ này sẽ đóng sau 5 giây."),
+                content: const Text("Cửa sổ đấu giá sẽ đóng sau 5 giây."),
                 actions: [
                   TextButton(
                     onPressed: () {
