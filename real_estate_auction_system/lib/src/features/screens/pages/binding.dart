@@ -18,11 +18,14 @@ class Binding extends StatefulWidget {
 
 class _BindingPageState extends State<Binding> {
   TextEditingController priceController = TextEditingController();
+  TextEditingController autoBindingController = TextEditingController();
   bool isAutomatically = false;
   late IOWebSocketChannel _channel;
   double currentPrice = 0.0;
+  double myCurrentBind = 0.0;
   int time = 30;
   Timer? _timer;
+  bool _isChecked = false;
 
   @override
   void initState() {
@@ -34,9 +37,19 @@ class _BindingPageState extends State<Binding> {
     _channel.stream.listen((message) {
       double newPrice = extractSecondDoubleFromMessage(message);
       int newTime = extractFirstIntFromMessage(message);
+      time = newTime;
       setState(() {
         currentPrice = newPrice;
-        time = newTime;
+        if (myCurrentBind < currentPrice && _isChecked == true) {
+          double? higherMoney;
+          if (autoBindingController.text != "") {
+            higherMoney = double.parse(priceController.text);
+          } else {
+            higherMoney = 1000000;
+          }
+          myCurrentBind = currentPrice + higherMoney;
+          auction(context, widget.realEstate.id, myCurrentBind);
+        }
         if (time == 0) {
           showDialog(
             context: context,
@@ -55,6 +68,7 @@ class _BindingPageState extends State<Binding> {
               );
             },
           );
+
           if (!context.mounted) return;
           _timer = Timer(const Duration(seconds: 5), () {
             Navigator.of(context).pop();
@@ -72,43 +86,35 @@ class _BindingPageState extends State<Binding> {
   }
 
   double extractSecondDoubleFromMessage(String message) {
-    try {
-      String trimmedJsonString = message.substring(0, message.length - 1);
+    String trimmedJsonString = message.substring(0, message.length - 1);
 
-      Map<String, dynamic> json = jsonDecode(trimmedJsonString);
-      if (json['type'] == 1 && json['target'] == "AuctionCountdown") {
-        List<dynamic> arguments = json['arguments'];
-        if (arguments.length >= 2) {
-          double secondValue = (arguments[1] as num).toDouble();
-          return secondValue;
-        }
-      } else {
-        return currentPrice;
+    Map<String, dynamic> json = jsonDecode(trimmedJsonString);
+    if (json['type'] == 1 && json['target'] == "AuctionCountdown") {
+      List<dynamic> arguments = json['arguments'];
+      if (arguments.length >= 2) {
+        double secondValue = (arguments[1] as num).toDouble();
+        return secondValue;
       }
-    } catch (e) {
-      print('Error parsing message: $e');
+    } else {
+      return currentPrice;
     }
     return 0.0;
   }
 
   int extractFirstIntFromMessage(String message) {
-    try {
-      String trimmedJsonString = message.substring(0, message.length - 1);
-      Map<String, dynamic> json = jsonDecode(trimmedJsonString);
-      if (json['type'] == 1 && json['target'] == "AuctionCountdown") {
-        List<dynamic> arguments = json['arguments'];
-        if (arguments.length >= 2) {
-          int firstValue = (arguments[0] as num).toInt();
-          return firstValue;
-        }
-      } else {
-        if (json['target'] == "AuctionEnded") {
-          return 0;
-        }
-        return time;
+    String trimmedJsonString = message.substring(0, message.length - 1);
+    Map<String, dynamic> json = jsonDecode(trimmedJsonString);
+    if (json['type'] == 1 && json['target'] == "AuctionCountdown") {
+      List<dynamic> arguments = json['arguments'];
+      if (arguments.length >= 2) {
+        int firstValue = (arguments[0] as num).toInt();
+        return firstValue;
       }
-    } catch (e) {
-      print('Error parsing message: $e');
+    } else {
+      if (json['target'] == "AuctionEnded") {
+        return 0;
+      }
+      return time;
     }
     return 0;
   }
@@ -126,6 +132,10 @@ class _BindingPageState extends State<Binding> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
+                'My Current Bind: ${myCurrentBind.toStringAsFixed(0)}',
+                style: const TextStyle(fontSize: 18.0, color: Colors.red),
+              ),
+              Text(
                 'Current Price: ${currentPrice.toStringAsFixed(0)}',
                 style: const TextStyle(fontSize: 18.0, color: Colors.red),
               ),
@@ -134,7 +144,7 @@ class _BindingPageState extends State<Binding> {
                 style: const TextStyle(fontSize: 18.0, color: Colors.red),
               ),
               const SizedBox(height: 20),
-              NumberInputWidget(controller: priceController),
+              numberInputWidget(context, priceController, 'Enter price'),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -160,6 +170,7 @@ class _BindingPageState extends State<Binding> {
                         },
                       );
                     } else {
+                      myCurrentBind = double.parse(priceController.text);
                       auction(context, widget.realEstate.id,
                           double.parse(priceController.text));
                     }
@@ -175,6 +186,28 @@ class _BindingPageState extends State<Binding> {
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
+              ),
+              SizedBox(
+                height: 50, // Adjust the height as needed
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: numberInputWidget(
+                          context, autoBindingController, 'Higher money'),
+                    ),
+                    Expanded(
+                      child: CheckboxListTile(
+                        title: const Text('Binding Automatically'),
+                        value: _isChecked,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _isChecked = value ?? false;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               )
             ],
           ),
@@ -184,25 +217,17 @@ class _BindingPageState extends State<Binding> {
   }
 }
 
-class NumberInputWidget extends StatelessWidget {
-  final TextEditingController controller;
-
-  const NumberInputWidget({Key? key, required this.controller})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: <TextInputFormatter>[
-        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-      ],
-      decoration: const InputDecoration(
-        labelText: 'Enter Price',
-        hintText: '0.00',
-        border: OutlineInputBorder(),
-      ),
-    );
-  }
+Widget numberInputWidget(BuildContext context, controller, String text) {
+  return TextField(
+    controller: controller,
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    inputFormatters: <TextInputFormatter>[
+      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+    ],
+    decoration: InputDecoration(
+      labelText: text,
+      hintText: '0.00',
+      border: const OutlineInputBorder(),
+    ),
+  );
 }

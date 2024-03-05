@@ -63,7 +63,10 @@ class RealEstateWidget extends StatelessWidget {
                         "Chưa diễn ra",
                         style: TextStyle(color: Colors.grey),
                       )
-                    : const Text("Đã hoàn thành")));
+                    : const Text(
+                        "Đã hoàn thành",
+                        style: TextStyle(color: Colors.red),
+                      )));
   }
 
   Widget _buildLeadingImage() {
