@@ -9,8 +9,16 @@ import 'dart:async';
 
 class Binding extends StatefulWidget {
   final RealEstate realEstate;
-
-  const Binding({Key? key, required this.realEstate}) : super(key: key);
+  final double currentPrice;
+  final DateTime endTime;
+  final double userBind;
+  const Binding(
+      {Key? key,
+      required this.realEstate,
+      required this.currentPrice,
+      required this.endTime,
+      required this.userBind})
+      : super(key: key);
 
   @override
   State<Binding> createState() => _BindingPageState();
@@ -19,38 +27,27 @@ class Binding extends StatefulWidget {
 class _BindingPageState extends State<Binding> {
   TextEditingController priceController = TextEditingController();
   TextEditingController autoBindingController = TextEditingController();
-  bool isAutomatically = false;
   late IOWebSocketChannel _channel;
-  double currentPrice = 0.0;
-  double myCurrentBind = 0.0;
-  int time = 30;
+  double _userBind = 0.0;
   Timer? _timer;
   bool _isChecked = false;
-
+  int time = 3600;
+  double _currentPrice = 0.0;
   @override
   void initState() {
     super.initState();
+    _userBind = widget.userBind;
+    _currentPrice = widget.currentPrice;
     _channel = IOWebSocketChannel.connect('wss://10.0.2.2:5001/auction-hub');
 
     _channel.sink.add('{"protocol":"json","version":1}');
 
-    _channel.stream.listen((message) {
-      double newPrice = extractSecondDoubleFromMessage(message);
-      int newTime = extractFirstIntFromMessage(message);
-      time = newTime;
+    _channel.stream.listen((message) async {
+      await extractFirstDoubleFromMessage(message);
       setState(() {
-        currentPrice = newPrice;
-        if (myCurrentBind < currentPrice && _isChecked == true) {
-          double? higherMoney;
-          if (autoBindingController.text != "") {
-            higherMoney = double.parse(priceController.text);
-          } else {
-            higherMoney = 1000000;
-          }
-          myCurrentBind = currentPrice + higherMoney;
-          auction(context, widget.realEstate.id, myCurrentBind);
-        }
-        if (time == 0) {
+        if (DateTime.now().isAfter(widget.endTime)) {
+          time = 0;
+          _timer?.cancel(); // Stop the timer if the auction ended
           showDialog(
             context: context,
             builder: (BuildContext context) {
@@ -68,10 +65,20 @@ class _BindingPageState extends State<Binding> {
               );
             },
           );
-
-          if (!context.mounted) return;
-          _timer = Timer(const Duration(seconds: 5), () {
-            Navigator.of(context).pop();
+        } else {
+          if (_timer != null) {
+            _timer?.cancel();
+          }
+          _timer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
+            setState(() {
+              final now = DateTime.now();
+              if (widget.endTime.isAfter(now)) {
+                time = widget.endTime.difference(now).inSeconds;
+              } else {
+                time = 0;
+                _timer?.cancel(); // Stop the timer if the auction ended
+              }
+            });
           });
         }
       });
@@ -85,38 +92,19 @@ class _BindingPageState extends State<Binding> {
     super.dispose();
   }
 
-  double extractSecondDoubleFromMessage(String message) {
+  Future<void> extractFirstDoubleFromMessage(String message) async {
     String trimmedJsonString = message.substring(0, message.length - 1);
 
-    Map<String, dynamic> json = jsonDecode(trimmedJsonString);
+    Map<String, dynamic> json = await jsonDecode(trimmedJsonString);
     if (json['type'] == 1 && json['target'] == "AuctionCountdown") {
       List<dynamic> arguments = json['arguments'];
-      if (arguments.length >= 2) {
-        double secondValue = (arguments[1] as num).toDouble();
-        return secondValue;
+      if (arguments.isNotEmpty && arguments[0] is num) {
+        double secondValue = (arguments[0] as num).toDouble();
+        setState(() {
+          _currentPrice = secondValue;
+        });
       }
-    } else {
-      return currentPrice;
     }
-    return 0.0;
-  }
-
-  int extractFirstIntFromMessage(String message) {
-    String trimmedJsonString = message.substring(0, message.length - 1);
-    Map<String, dynamic> json = jsonDecode(trimmedJsonString);
-    if (json['type'] == 1 && json['target'] == "AuctionCountdown") {
-      List<dynamic> arguments = json['arguments'];
-      if (arguments.length >= 2) {
-        int firstValue = (arguments[0] as num).toInt();
-        return firstValue;
-      }
-    } else {
-      if (json['target'] == "AuctionEnded") {
-        return 0;
-      }
-      return time;
-    }
-    return 0;
   }
 
   @override
@@ -132,17 +120,19 @@ class _BindingPageState extends State<Binding> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                'My Current Bind: ${myCurrentBind.toStringAsFixed(0)}',
+                'My Current Bind: ${_userBind.toStringAsFixed(0)}',
                 style: const TextStyle(fontSize: 18.0, color: Colors.red),
               ),
               Text(
-                'Current Price: ${currentPrice.toStringAsFixed(0)}',
+                'Current Price: ${_currentPrice.toStringAsFixed(0)}',
                 style: const TextStyle(fontSize: 18.0, color: Colors.red),
               ),
               Text(
-                'Current Time: ${time.toStringAsFixed(0)}',
+                'Time left: ${formatTime(time)}', // Display the remaining time
                 style: const TextStyle(fontSize: 18.0, color: Colors.red),
               ),
+              if (_currentPrice == _userBind)
+                const Text('You are currently the winner.'),
               const SizedBox(height: 20),
               numberInputWidget(context, priceController, 'Enter price'),
               SizedBox(
@@ -150,7 +140,8 @@ class _BindingPageState extends State<Binding> {
                 child: ElevatedButton(
                   onPressed: () {
                     if (priceController.text == "" ||
-                        double.parse(priceController.text) <= currentPrice) {
+                        double.parse(priceController.text) <=
+                            widget.currentPrice) {
                       showDialog(
                         context: context,
                         builder: (BuildContext context) {
@@ -170,7 +161,7 @@ class _BindingPageState extends State<Binding> {
                         },
                       );
                     } else {
-                      myCurrentBind = double.parse(priceController.text);
+                      _userBind = double.parse(priceController.text);
                       auction(context, widget.realEstate.id,
                           double.parse(priceController.text));
                     }
@@ -214,6 +205,13 @@ class _BindingPageState extends State<Binding> {
         ),
       ),
     );
+  }
+
+  String formatTime(int seconds) {
+    final hours = (seconds ~/ 3600).toString().padLeft(2, '0');
+    final minutes = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
+    final remainingSeconds = (seconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$remainingSeconds';
   }
 }
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:real_estate_auction_system/src/features/models/auction_response.dart';
 import 'package:real_estate_auction_system/src/features/models/real_estate.dart';
 import 'package:real_estate_auction_system/src/constants/api_config.dart';
 import 'package:http/http.dart' as http;
+import 'package:real_estate_auction_system/src/features/screens/pages/binding.dart';
 import 'dart:convert';
 import 'package:real_estate_auction_system/src/features/widgets/alert_dialog.dart';
 import 'package:web_socket_channel/io.dart';
@@ -104,35 +106,67 @@ Future auction(BuildContext context, int auctionId, double currentPrice) async {
   Navigator.of(context, rootNavigator: true).pop();
 }
 
-Future<bool> checkAuction(BuildContext context, int auctionId) async {
+Future<void> checkAuction(
+    BuildContext context, int auctionId, RealEstate realEstate) async {
   showDialog(
-      context: context,
-      builder: (context) {
-        return const Center(
-          child: CircularProgressIndicator(
-            color: mainColor,
-            backgroundColor: greyColor,
-          ),
-        );
-      });
-  final uri =
-      Uri.parse('${ApiConfig.baseUrl}/RealtimeAuction/StartAuction?realEstateId=$auctionId');
-  // var sharedPref = await SharedPreferences.getInstance();
-  // String? token = sharedPref.getString('token');
-  var response = await http.get(
+    context: context,
+    builder: (context) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: mainColor,
+          backgroundColor: greyColor,
+        ),
+      );
+    },
+  );
+
+  final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/RealtimeAuction/StartAuction?realEstateId=$auctionId');
+  var sharedPref = await SharedPreferences.getInstance();
+  String? token = sharedPref.getString('token');
+   final response = await http.get(
     uri,
-    // headers: {
-    //   'Authorization': 'Bearer $token',
-    // },
+    headers: {
+      'Authorization': 'Bearer $token',
+    },
   ).timeout(const Duration(seconds: 30));
   if (response.statusCode == 200) {
-    final bool apiResponse = json.decode(response.body);
-    if (!context.mounted) return false;
+    final jsonResponse = json.decode(response.body);
+    final auctionResponse = AuctionResponse.fromJson(jsonResponse);
+    if (!context.mounted) return;
     Navigator.of(context, rootNavigator: true).pop();
-    return apiResponse;
-  } else {
-    if (!context.mounted) return false;
-    Navigator.of(context, rootNavigator: true).pop();
-    return false;
-  }
+
+    if (auctionResponse.onGoing) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Binding(
+              currentPrice: auctionResponse.currentPrice,
+              endTime: auctionResponse.endTime,
+              realEstate: realEstate,
+              userBind: auctionResponse.userBind),
+        ),
+      );
+    } else {
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text("Phiên đấu giá đã kết thúc"),
+            content: const Text(
+                "Hãy quét lại trang để load lại thông tin các buổi đấu giá."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  } else {}
 }

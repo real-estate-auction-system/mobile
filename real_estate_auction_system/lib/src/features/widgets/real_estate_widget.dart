@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:real_estate_auction_system/src/constants/images.dart';
 import 'package:real_estate_auction_system/src/features/controllers/auction_controller.dart';
 import 'package:real_estate_auction_system/src/features/models/real_estate.dart';
-import 'package:real_estate_auction_system/src/features/screens/pages/binding.dart';
 
 class RealEstateWidget extends StatelessWidget {
   final RealEstate realEstate;
@@ -23,37 +22,7 @@ class RealEstateWidget extends StatelessWidget {
                 ? SizedBox(
                     child: ElevatedButton(
                       onPressed: () async {
-                        bool check = await checkAuction(context, realEstate.id);
-                        if (check == true) {
-                          if (!context.mounted) return;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  Binding(realEstate: realEstate),
-                            ),
-                          );
-                        } else {
-                          if (!context.mounted) return;
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: const Text("Phiên đấu giá đã kết thúc"),
-                                content: const Text(
-                                    "Hãy quét lại trang để load lại thông tin các buổi đấu giá."),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
-                                    child: const Text("OK"),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        }
+                       await checkAuction(context, realEstate.id, realEstate);
                       },
                       child: const Text('Tới đấu giá'),
                     ),
