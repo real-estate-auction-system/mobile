@@ -43,8 +43,20 @@ class _BindingPageState extends State<Binding> {
     _channel.sink.add('{"protocol":"json","version":1}');
 
     _channel.stream.listen((message) async {
-      await extractFirstDoubleFromMessage(message);
+      double value = await extractFirstDoubleFromMessage(message);
       setState(() {
+        _currentPrice = value;
+        if (_userBind < _currentPrice && _isChecked == true) {
+          double higherPrice = 1000000;
+          if (autoBindingController.text != "") {
+            higherPrice = double.parse(autoBindingController.text);
+          }
+          double sum = _currentPrice + higherPrice;
+          auction(context, widget.realEstate.id, sum);
+          
+          _currentPrice = sum;
+          _userBind = sum;
+        }
         if (DateTime.now().isAfter(widget.endTime)) {
           time = 0;
           _timer?.cancel(); // Stop the timer if the auction ended
@@ -92,7 +104,7 @@ class _BindingPageState extends State<Binding> {
     super.dispose();
   }
 
-  Future<void> extractFirstDoubleFromMessage(String message) async {
+  Future<double> extractFirstDoubleFromMessage(String message) async {
     String trimmedJsonString = message.substring(0, message.length - 1);
 
     Map<String, dynamic> json = await jsonDecode(trimmedJsonString);
@@ -100,11 +112,11 @@ class _BindingPageState extends State<Binding> {
       List<dynamic> arguments = json['arguments'];
       if (arguments.isNotEmpty && arguments[0] is num) {
         double secondValue = (arguments[0] as num).toDouble();
-        setState(() {
-          _currentPrice = secondValue;
-        });
+        return secondValue;
       }
+      return _currentPrice;
     }
+    return _currentPrice;
   }
 
   @override
@@ -131,8 +143,10 @@ class _BindingPageState extends State<Binding> {
                 'Time left: ${formatTime(time)}', // Display the remaining time
                 style: const TextStyle(fontSize: 18.0, color: Colors.red),
               ),
-              if (_currentPrice == _userBind)
-                const Text('You are currently the winner.'),
+              AuctionWinnerMessage(
+                currentPrice: _currentPrice,
+                userBind: _userBind,
+              ),
               const SizedBox(height: 20),
               numberInputWidget(context, priceController, 'Enter price'),
               SizedBox(
@@ -228,4 +242,50 @@ Widget numberInputWidget(BuildContext context, controller, String text) {
       border: const OutlineInputBorder(),
     ),
   );
+}
+
+class AuctionWinnerMessage extends StatefulWidget {
+  final double currentPrice;
+  final double userBind;
+
+  const AuctionWinnerMessage({
+    required this.currentPrice,
+    required this.userBind,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  State<AuctionWinnerMessage> createState() => _AuctionWinnerMessageState();
+}
+
+class _AuctionWinnerMessageState extends State<AuctionWinnerMessage> {
+  bool isWinner = false;
+
+  @override
+  void initState() {
+    super.initState();
+    checkWinnerStatus();
+  }
+
+  void checkWinnerStatus() {
+    setState(() {
+      isWinner = (widget.currentPrice == widget.userBind);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant AuctionWinnerMessage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentPrice != widget.currentPrice ||
+        oldWidget.userBind != widget.userBind) {
+      checkWinnerStatus();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return isWinner
+        ? const Text('You are currently the winner.')
+        : const SizedBox();
+  }
 }

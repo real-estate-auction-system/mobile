@@ -92,6 +92,7 @@ Future auction(BuildContext context, int auctionId, double currentPrice) async {
           ),
         );
       });
+  await Future.delayed(const Duration(seconds: 3));
   final uri = Uri.parse(
       '${ApiConfig.baseUrl}/RealtimeAuction?realEstateId=$auctionId&currentPrice=$currentPrice');
   var sharedPref = await SharedPreferences.getInstance();
