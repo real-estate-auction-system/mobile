@@ -22,7 +22,7 @@ class RealEstateWidget extends StatelessWidget {
                 ? SizedBox(
                     child: ElevatedButton(
                       onPressed: () async {
-                       await checkAuction(context, realEstate.id, realEstate);
+                        await checkAuction(context, realEstate.id, realEstate);
                       },
                       child: const Text('Tới đấu giá'),
                     ),

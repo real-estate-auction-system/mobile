@@ -25,13 +25,6 @@ Future<List<RealEstate>> getTodayAuction(BuildContext context) async {
       List<RealEstate> realEstate = RealEstate.listFromJson(realEstateJsonList);
       return realEstate;
     } else {
-      if (!context.mounted) return [];
-      Navigator.of(context).pop();
-      CustomAlertDialog.show(
-        context,
-        "Đã xảy ra lỗi",
-        response.body,
-      );
       return [];
     }
   } catch (error) {
@@ -150,6 +143,7 @@ Future<void> checkAuction(
       );
     } else {
       if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -169,5 +163,26 @@ Future<void> checkAuction(
         },
       );
     }
-  } else {}
+  } else {
+    if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text("Phiên đấu giá đã kết thúc"),
+            content: const Text(
+                "Hãy quét lại trang để load lại thông tin các buổi đấu giá."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          );
+        },
+      );
+  }
 }

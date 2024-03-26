@@ -4,6 +4,7 @@ import 'package:real_estate_auction_system/src/constants/colors.dart';
 import 'package:real_estate_auction_system/src/constants/images.dart';
 import 'package:real_estate_auction_system/src/constants/texts.dart';
 import 'package:real_estate_auction_system/src/features/controllers/login_controller.dart';
+import 'package:real_estate_auction_system/src/features/screens/login/create_account.dart';
 bool obscureText = true;
 
 class LoginScreen extends StatefulWidget {
@@ -196,15 +197,15 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         GestureDetector(
             onTap: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => const ForgetPassword(),
-              //   ),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateAccount(),
+                ),
+              );
             },
             child: const Text(
-              "Quên mật khẩu?",
+              "Chưa có tài khoản?",
               style: TextStyle(color: Colors.grey, fontSize: 12),
             )),
       ],

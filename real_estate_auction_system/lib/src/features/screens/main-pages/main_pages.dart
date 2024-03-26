@@ -69,7 +69,7 @@ class _MainPagesState extends State<MainPages> {
             return CupertinoTabView(
               builder: (context) {
                 return const SafeArea(
-                  child: CupertinoPageScaffold(child: Order()),
+                  child: CupertinoPageScaffold(child: OrderPage()),
                 );
               },
             );
@@ -77,7 +77,7 @@ class _MainPagesState extends State<MainPages> {
             return CupertinoTabView(
               builder: (context) {
                 return const SafeArea(
-                  child: CupertinoPageScaffold(child: News()),
+                  child: CupertinoPageScaffold(child: NewsPage()),
                 );
               },
             );

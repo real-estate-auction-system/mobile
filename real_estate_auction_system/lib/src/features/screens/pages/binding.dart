@@ -53,49 +53,56 @@ class _BindingPageState extends State<Binding> {
           }
           double sum = _currentPrice + higherPrice;
           auction(context, widget.realEstate.id, sum);
-          
+
           _currentPrice = sum;
           _userBind = sum;
         }
-        if (DateTime.now().isAfter(widget.endTime)) {
-          time = 0;
-          _timer?.cancel(); // Stop the timer if the auction ended
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text("Phiên đấu giá đã kết thúc"),
-                content: const Text("Cửa sổ đấu giá sẽ đóng sau 5 giây."),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text("OK"),
-                  ),
-                ],
-              );
-            },
-          );
+        checkEndTime();
+      });
+    }
+    );
+  }
+
+  void checkEndTime() {
+  final now = DateTime.now();
+  if (now.isAfter(widget.endTime)) {
+    time = 0;
+    _timer?.cancel();
+    showAuctionEndedDialog(context);
+  } else {
+    if (_timer != null) {
+      _timer?.cancel();
+    }
+    _timer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
+      setState(() {
+        final now = DateTime.now();
+        if (widget.endTime.isAfter(now)) {
+          time = widget.endTime.difference(now).inSeconds;
         } else {
-          if (_timer != null) {
-            _timer?.cancel();
-          }
-          _timer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
-            setState(() {
-              final now = DateTime.now();
-              if (widget.endTime.isAfter(now)) {
-                time = widget.endTime.difference(now).inSeconds;
-              } else {
-                time = 0;
-                _timer?.cancel(); // Stop the timer if the auction ended
-              }
-            });
-          });
+          time = 0;
+          _timer?.cancel(); 
+          showAuctionEndedDialog(context);
+          Navigator.of(context).pop();
+
         }
       });
     });
   }
+}
+
+  void showAuctionEndedDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return const AlertDialog(
+        title: Text("Phiên đấu giá đã kết thúc"),
+        content: Text("Cửa sổ này sẽ đóng trong 5 giây."),
+      );
+      
+    },
+  );
+}
 
   @override
   void dispose() {

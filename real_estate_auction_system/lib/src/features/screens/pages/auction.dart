@@ -11,7 +11,7 @@ class Auction extends StatefulWidget {
 }
 
 class _AuctionState extends State<Auction> {
-  late List<RealEstate> realEstates;
+  List<RealEstate> realEstates = [];
   late bool _loading;
   @override
   void initState() {
@@ -43,39 +43,35 @@ class _AuctionState extends State<Auction> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
           ),
         ),
-        body: RefreshIndicator(
-            onRefresh: () => initializeData(),
-            backgroundColor: greyColor,
-            color: mainColor,
-            child: FutureBuilder(
-                future: null,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting ||
-                      _loading) {
-                    return const Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        SizedBox(height: 200),
-                        Center(
-                          child: CircularProgressIndicator(
-                            color: mainColor,
-                          ),
-                        ),
-                      ],
-                    );
-                  } else if (snapshot.hasError) {
-                    return const Center(
-                      child: Text('Error fetching data'),
-                    );
-                  } else {
-                    return SizedBox(
-                        child: ListView.builder(
-                      itemCount: realEstates.length,
-                      itemBuilder: (context, index) {
-                        return RealEstateWidget(realEstate: realEstates[index]);
-                      },
-                    ));
-                  }
-                })));
+      body: RefreshIndicator(
+        onRefresh: initializeData,
+        backgroundColor: greyColor,
+        color: mainColor,
+        child: _loading
+            ? const Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  SizedBox(height: 200),
+                  Center(
+                    child: CircularProgressIndicator(
+                      color: mainColor,
+                    ),
+                  ),
+                ],
+              )
+            : realEstates.isEmpty
+                ? const Center(
+                    child: Text('Không có phiên đấu giá trong hôm nay'),
+                  )
+                : ListView.builder(
+                    itemCount: realEstates.length,
+                    itemBuilder: (context, index) {
+                      return RealEstateWidget(
+                        realEstate: realEstates[index],
+                      );
+                    },
+                  ),
+      ),
+    );
   }
 }
